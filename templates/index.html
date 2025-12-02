@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="icon"
+      href="{{ url_for('static', filename='langPredict-logo.svg') }}"
+    />
+    <title>DaLI - Language Identifier</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+    <style>
+      :root {
+        --primary-green: #4caf50;
+        --primary-green-dark: #1b5e20;
+        --color-fr-bg: #e3f2fd;
+        --color-fr-border: #2196f3;
+        --color-fr-text: #0d47a1;
+        --color-en-bg: #ead4fe;
+        --color-en-border: #6203ba;
+        --color-en-text: #6203ba;
+        --color-da-bg: #e8f5e9;
+        --color-da-border: #4caf50;
+        --color-da-text: #1b5e20;
+        --glass-bg: rgba(255, 255, 255, 0.75);
+        --glass-border: rgba(255, 255, 255, 0.6);
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+        overflow-x: hidden;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: url("{{ url_for('static', filename='langPredict_background.jpg') }}")
+          no-repeat center center/cover;
+        filter: blur(8px) brightness(0.8);
+        z-index: -1;
+        transform: scale(1.1);
+      }
+
+      .container {
+        background-color: var(--glass-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        width: 90%;
+        max-width: 600px;
+        padding: 40px;
+        border-radius: 20px;
+        border: 1px solid var(--glass-border);
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        text-align: center;
+      }
+
+      h1 {
+        color: #222;
+        margin-bottom: 5px;
+        text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+      }
+
+      p.subtitle {
+        color: #444;
+        margin-top: 0;
+        margin-bottom: 30px;
+        font-weight: 500;
+      }
+
+      .input-wrapper {
+        position: relative;
+        margin-bottom: 20px;
+      }
+
+      textarea {
+        width: 100%;
+        height: 150px;
+        padding: 15px;
+        padding-bottom: 50px;
+        background-color: rgba(255, 255, 255, 0.9);
+        border: 2px solid rgba(255, 255, 255, 0.5);
+        border-radius: 12px;
+        font-size: 16px;
+        resize: none;
+        box-sizing: border-box;
+        transition: all 0.3s;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+      }
+
+      textarea:focus {
+        outline: none;
+        border-color: var(--primary-green);
+        background-color: #fff;
+        box-shadow: 0 0 10px rgba(76, 175, 80, 0.2);
+      }
+
+      /* Buttons inside text area */
+      .action-btn {
+        position: absolute;
+        bottom: 15px;
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        border: none;
+        font-size: 20px;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .attach-btn {
+        right: 70px;
+        background: transparent;
+        color: #555;
+      }
+      .attach-btn:hover {
+        color: #2196f3;
+        transform: scale(1.1);
+      }
+
+      .mic-btn {
+        right: 15px;
+        background: white;
+        border: 1px solid #ddd;
+        color: #555;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      }
+      .mic-btn:hover {
+        background-color: #f1f8e9;
+        color: var(--primary-green);
+        transform: scale(1.1);
+      }
+
+      .mic-recording {
+        background-color: #ffcdd2 !important;
+        color: #d32f2f !important;
+        border-color: #d32f2f !important;
+        animation: pulse 1.5s infinite;
+      }
+
+      /* Submit Button */
+      input[type="submit"] {
+        background-image: linear-gradient(
+          to right,
+          #028a1d 0%,
+          #21ac72 51%,
+          #028a1d 100%
+        );
+        background-size: 200% auto;
+        color: white;
+        padding: 15px 45px;
+        border: none;
+        border-radius: 50px;
+        font-size: 18px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        cursor: pointer;
+        width: 100%;
+        transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+        box-shadow: 0 5px 15px rgba(2, 138, 29, 0.2);
+      }
+      input[type="submit"]:hover {
+        background-position: right center;
+        transform: translateY(-3px);
+        box-shadow: 0 15px 30px rgba(2, 138, 29, 0.4);
+      }
+      input[type="submit"]:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
+
+      /* Results */
+      .result-box {
+        margin-top: 30px;
+        padding: 20px;
+        border-radius: 12px;
+        text-align: left;
+        animation: fadeIn 0.5s ease-in-out;
+        background-color: rgba(255, 255, 255, 0.95);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+      }
+
+      .fr {
+        border-left: 6px solid var(--color-fr-border);
+        color: var(--color-fr-text);
+        background-color: var(--color-fr-bg);
+      }
+      .en {
+        border-left: 6px solid var(--color-en-border);
+        color: var(--color-en-text);
+        background-color: var(--color-en-bg);
+      }
+      .da {
+        border-left: 6px solid var(--color-da-border);
+        color: var(--color-da-text);
+        background-color: var(--color-da-bg);
+      }
+
+      .result-header {
+        font-size: 24px;
+        font-weight: bold;
+        margin-bottom: 5px;
+      }
+      .result-score {
+        font-size: 14px;
+        opacity: 0.8;
+      }
+
+      /* Status Messages */
+      #status-msg {
+        margin-top: 20px;
+        margin-bottom: 20px;
+        padding: 15px;
+        border-radius: 12px;
+        text-align: left;
+        animation: fadeIn 0.5s ease-in-out;
+        background-color: rgba(255, 255, 255, 0.95);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        display: none;
+      }
+
+      /* Animations */
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+          box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.7);
+        }
+        70% {
+          transform: scale(1.1);
+          box-shadow: 0 0 0 10px rgba(244, 67, 54, 0);
+        }
+        100% {
+          transform: scale(1);
+          box-shadow: 0 0 0 0 rgba(244, 67, 54, 0);
+        }
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .loading-spinner {
+        display: inline-block;
+        margin-left: 10px;
+        width: 15px;
+        height: 15px;
+        border: 2px solid rgba(0, 0, 0, 0.1);
+        border-radius: 50%;
+        border-top-color: #000;
+        animation: spin 1s ease-in-out infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>
+        <img
+          class="main_logo"
+          style="width: 37px"
+          src="{{ url_for('static', filename='langPredict-logo.svg') }}"
+          alt="DaLI Logo"
+        />
+        LangPredict
+      </h1>
+      <p class="subtitle">Identify: French, English, or Moroccan Darija</p>
+
+      <form method="POST" action="/">
+        <div class="input-wrapper">
+          <textarea
+            id="user_text"
+            name="text_input"
+            placeholder="Type here, click the mic, or upload a file..."
+            required
+          >
+{{ user_text }}</textarea
+          >
+
+          <button
+            type="button"
+            class="action-btn attach-btn"
+            title="Attach Audio File"
+            onclick="uploadFile()"
+          >
+            <i class="fa fa-paperclip" aria-hidden="true"></i>
+          </button>
+
+          <button
+            type="button"
+            id="mic-btn"
+            class="action-btn mic-btn"
+            onclick="startRecording()"
+            title="Record Audio"
+          >
+            <i class="fas fa-microphone"></i>
+          </button>
+        </div>
+
+        <div id="status-msg"></div>
+        <input type="submit" value="Identify Language" class="predict_btn" />
+      </form>
+
+      <div id="result-container">
+        {% if prediction %}
+        <div
+          class="result-box {% if 'Fr' in prediction or 'French' in prediction %}fr{% elif 'An' in prediction or 'En' in prediction %}en{% else %}da{% endif %}"
+        >
+          <div class="result-header">
+            <i class="fas fa-language"></i> {{ prediction }}
+          </div>
+          <div class="result-score">Confidence Score: {{ confidence }}%</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <script>
+      // --- Configuration ---
+      const LANG_MAP = {
+        "en-US": { label: "English", class: "en" },
+        English: { label: "English", class: "en" },
+        Anglais: { label: "English", class: "en" },
+        "fr-FR": { label: "Français", class: "fr" },
+        French: { label: "Français", class: "fr" },
+        Français: { label: "Français", class: "fr" },
+        "ar-MA": { label: "Darija", class: "da" },
+        Darija: { label: "Darija", class: "da" },
+        "Moroccan Darija": { label: "Darija", class: "da" },
+      };
+
+      // --- Elements ---
+      const textArea = document.getElementById("user_text");
+      const statusEl = document.getElementById("status-msg");
+      const resultContainer = document.getElementById("result-container");
+      const predictBtn = document.querySelector(".predict_btn");
+      const micBtn = document.getElementById("mic-btn");
+
+      // --- Helpers ---
+      function displayStatus(message, type = "success") {
+        statusEl.style.display = "block";
+        statusEl.innerHTML = message;
+        if (type === "error") {
+          statusEl.style.color = "#d32f2f";
+          statusEl.style.backgroundColor = "#ffcdd2";
+        } else {
+          statusEl.style.color = "#1b5e20";
+          statusEl.style.backgroundColor = "#e8f5e9";
+        }
+        setTimeout(() => {
+          statusEl.style.display = "none";
+        }, 5000);
+      }
+
+      function setBusyState(isBusy, text = "Identify Language") {
+        predictBtn.disabled = isBusy;
+        predictBtn.value = isBusy ? "Processing..." : text;
+
+        if (isBusy) {
+          resultContainer.innerHTML =
+            '<div style="margin-top:20px; opacity:0.6;">Analyzing... <div class="loading-spinner"></div></div>';
+        }
+      }
+
+      function updateResultUI(predictionKey, confidenceVal) {
+        const langData = LANG_MAP[predictionKey] || {
+          label: predictionKey || "Unknown",
+          class: "da",
+        };
+        const confidenceDisplay =
+          confidenceVal !== undefined && confidenceVal !== null
+            ? `${confidenceVal}%`
+            : "N/A";
+
+        const html = `
+          <div class="result-box ${langData.class}">
+            <div class="result-header">
+              <i class="fas fa-language"></i> ${langData.label}
+            </div>
+            <div class="result-score">Confidence Score: ${confidenceDisplay}</div>
+          </div>
+        `;
+        resultContainer.innerHTML = html;
+      }
+
+      // --- Core Logic ---
+
+      function startRecording() {
+        // micBtn.classList.add("mic-recording");
+        // textArea.placeholder = "Listening...";
+        // setBusyState(true);
+
+        // fetch("/record", { method: "POST" })
+        //   .then((res) => res.json())
+        //   .then((data) => {
+        //     micBtn.classList.remove("mic-recording");
+        //     setBusyState(false);
+
+        //     if (data.status === "success") {
+        //       textArea.value = data.text || "";
+        //       displayStatus("Audio processed successfully!");
+
+        //       // Determine which key to use for lookup
+        //       const predKey = data.prediction || data.detected_lang;
+        //       updateResultUI(predKey, data.confidence);
+        //     } else {
+        //       displayStatus(data.message || "Recording failed", "error");
+        //       textArea.placeholder = "Type text here...";
+        //       resultContainer.innerHTML = ""; // Clear loader
+        //     }
+        //   })
+        //   .catch((err) => {
+        //     console.error(err);
+        //     micBtn.classList.remove("mic-recording");
+        //     setBusyState(false);
+        //     resultContainer.innerHTML = "";
+        //     displayStatus("Error connecting to server.", "error");
+        //   });
+      }
+
+      function uploadFile() {
+        // // Create a temporary input
+        // const fileInput = document.createElement("input");
+        // fileInput.type = "file";
+        // fileInput.accept = ".mp3, .wav";
+
+        // fileInput.onchange = () => {
+        //   const file = fileInput.files[0];
+        //   if (!file) return;
+
+        //   setBusyState(true, "Uploading...");
+        //   const formData = new FormData();
+        //   formData.append("audio_file", file);
+
+        //   fetch("/upload", {
+        //     method: "POST",
+        //     body: formData,
+        //   })
+        //     .then((res) => res.json())
+        //     .then((data) => {
+        //       setBusyState(false);
+        //       if (data.status === "success") {
+        //         displayStatus("File uploaded and processed!");
+        //         updateResultUI(data.prediction, data.confidence);
+        //       } else {
+        //         displayStatus(data.message || "Upload failed", "error");
+        //         resultContainer.innerHTML = "";
+        //       }
+        //     })
+        //     .catch((err) => {
+        //       console.error(err);
+        //       setBusyState(false);
+        //       resultContainer.innerHTML = "";
+        //       displayStatus("Error uploading file.", "error");
+        //     });
+        // };
+
+        // fileInput.click();
+      }
+    </script>
+  </body>
+</html>
